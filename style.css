@@ -1,0 +1,100 @@
+let tasks = JSON.parse(localStorage.getItem("tasks") || "[]");
+
+function saveTasks() {
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+}
+
+function addTask() {
+    const title = document.getElementById("taskTitle").value.trim();
+    const priority = document.getElementById("taskPriority").value;
+    const deadline = document.getElementById("taskDeadline").value;
+
+    if (!title || !deadline) {
+        alert("Please fill in all fields.");
+        return;
+    }
+
+    tasks.push({
+        id: Date.now(),
+        title,
+        priority,
+        deadline,
+        completed: false
+    });
+
+    saveTasks();
+    renderTasks();
+    document.getElementById("taskTitle").value = "";
+    document.getElementById("taskDeadline").value = "";
+}
+
+function toggleComplete(id) {
+    const task = tasks.find(t => t.id === id);
+    task.completed = !task.completed;
+    saveTasks();
+    renderTasks();
+}
+
+function deleteTask(id) {
+    tasks = tasks.filter(t => t.id !== id);
+    saveTasks();
+    renderTasks();
+}
+
+function editTask(id) {
+    const task = tasks.find(t => t.id === id);
+    const newTitle = prompt("Edit Title", task.title);
+    const newDeadline = prompt("Edit Deadline (yyyy-mm-dd)", task.deadline);
+    const newPriority = prompt("Edit Priority (High/Medium/Low)", task.priority);
+    if (newTitle && newDeadline && newPriority) {
+        task.title = newTitle;
+        task.deadline = newDeadline;
+        task.priority = newPriority;
+        saveTasks();
+        renderTasks();
+    }
+}
+
+function renderTasks() {
+    const list = document.getElementById("taskList");
+    list.innerHTML = "";
+
+    const statusFilter = document.getElementById("filterStatus").value;
+    const priorityFilter = document.getElementById("filterPriority").value;
+
+    const today = new Date();
+    let filtered = tasks;
+
+    if (statusFilter !== "all") {
+        filtered = filtered.filter(t => statusFilter === "completed" ? t.completed : !t.completed);
+    }
+    if (priorityFilter !== "all") {
+        filtered = filtered.filter(t => t.priority === priorityFilter);
+    }
+
+    filtered.forEach(task => {
+        const taskEl = document.createElement("div");
+        const isOverdue = new Date(task.deadline) < today && !task.completed;
+        const diffDays = Math.ceil((new Date(task.deadline) - today) / (1000 * 60 * 60 * 24));
+
+        taskEl.className = `task ${task.completed ? "completed" : ""} ${isOverdue ? "overdue" : ""}`;
+
+        taskEl.innerHTML = ` <div>
+          <div><strong>${task.title}</strong> 
+            <span class="badge priority-${task.priority}">${task.priority}</span>
+          </div>
+          <div class="deadline-note">
+            Deadline: ${task.deadline} 
+            ${!task.completed ? (isOverdue ? ` | <span style="color:red;">Overdue</span>` : ` | Due in ${diffDays} day(s)`) : ""}
+          </div>
+        </div>
+        <div class="task-buttons">
+          <input type="checkbox" ${task.completed ? "checked" : ""} onchange="toggleComplete(${task.id})" />
+          <button onclick="editTask(${task.id})">✏</button>
+          <button onclick="deleteTask(${task.id})">🗑</button>
+        </div>`;
+        list.appendChild(taskEl);
+    });
+}
+
+renderTasks();
